@@ -1,0 +1,29 @@
+{
+  "name": "overzap",
+  "version": "1.0.0",
+  "description": "Api for ordering via whatsapp",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index",
+    "dev": "nodemon index"
+  },
+  "keywords": [
+    "API",
+    "WhatsApp"
+  ],
+  "author": "Ryan de Menezes Nobre Ciriaco",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.1",
+    "mongoose": "^6.5.0",
+    "password-hash": "^1.2.2",
+    "qrcode-terminal": "^0.12.0",
+    "whatsapp-web.js": "^1.17.1"
+  },
+  "devDependencies": {
+    "dotenv": "^16.0.1",
+    "morgan": "^1.10.0",
+    "nodemon": "^2.0.19"
+  }
+}
