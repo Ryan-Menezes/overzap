@@ -65,8 +65,8 @@ client.on('message', msg => {
 client.initialize();
 
 const sendMessage = async (phone, message) => {
-	const phone = `55${phone}@c.us`;
-	const message = message || 'Algo deu errado com a mensagem';
+	phone = `55${phone}@c.us`;
+	message = message || 'Algo deu errado com a mensagem';
 
 	try {
 		// await client.sendMessage(phone, message);
