@@ -1,10 +1,12 @@
-const Categoria = require('../models/categoria.model');
+const Pedido = require('../models/pedido.model');
+const Produto = require('../models/produto.model');
+const PedidoProduto = require('../models/pedidoProduto.model');
 
 module.exports = {
     index: async (req, res) => {
         const { id: restauranteId } = req.headers;
 
-        Categoria.find(
+        Pedido.find(
             {
                 restauranteId,
             }, 
@@ -18,7 +20,7 @@ module.exports = {
 
                 res.status(200).json({
                     error: false,
-                    categorias: doc,
+                    pedidos: doc,
                 });
             },
         );
@@ -28,7 +30,7 @@ module.exports = {
         const { id: restauranteId } = req.headers;
         const doc = { ...req.body, restauranteId };
 
-        Categoria.create(doc, err => {
+        Pedido.create(doc, err => {
             if (err) {
                 return res.status(400).json({
                     error: true,
@@ -38,19 +40,19 @@ module.exports = {
 
             res.status(200).json({
                 error: false,
-                message: 'Categoria cadastrada com sucesso!',
+                message: 'Pedido cadastrado com sucesso!',
             });
         });
     },
 
     update: async (req, res) => {
         const { id: restauranteId } = req.headers;
-        const { id: categoriaId } = req.params;
+        const { id: pedidoId } = req.params;
         const doc = { ...req.body };
 
-        Categoria.findOneAndUpdate(
+        Pedido.findOneAndUpdate(
             {
-                _id: categoriaId,
+                _id: pedidoId,
                 restauranteId,
             },
             doc,
@@ -68,7 +70,7 @@ module.exports = {
 
                 res.status(200).json({
                     error: false,
-                    categoria: doc,
+                    pedido: doc,
                 });
             },
         );
@@ -76,11 +78,11 @@ module.exports = {
 
     delete: async (req, res) => {
         const { id: restauranteId } = req.headers;
-        const { id: categoriaId } = req.params;
+        const { id: pedidoId } = req.params;
 
-        Categoria.findOneAndDelete(
+        Pedido.findOneAndDelete(
             {
-                _id: categoriaId,
+                _id: pedidoId,
                 restauranteId,
             },
             (err, doc) => {
@@ -93,7 +95,45 @@ module.exports = {
 
                 res.status(200).json({
                     error: false,
-                    message: 'Categoria deletada com sucesso!',
+                    message: 'Pedido deletado com sucesso!',
+                });
+            },
+        );
+    },
+
+    addItem: async (req, res) => {
+        const { id: restauranteId } = req.headers;
+        const { id: pedidoId } = req.params;
+        const { produtoId, quantidade = 1, observacao = null } = req.body;
+
+        const produto = await Produto.findById(produtoId);
+
+        if (!produto) {
+            return res.status(400).json({
+                error: true,
+                message: 'Este produto não existe!',
+            });
+        }
+
+        PedidoProduto.create(
+            {
+                pedidoId,
+                produtoId,
+                valorUnitario: produto.valor,
+                quantidade,
+                observacao,
+            }, 
+            (err, doc) => {
+                if (err) {
+                    return res.status(400).json({
+                        error: true,
+                        message: err,
+                    });
+                }
+
+                res.status(200).json({
+                    error: false,
+                    message: 'Produto adicionado ao pedido com sucesso!',
                 });
             },
         );

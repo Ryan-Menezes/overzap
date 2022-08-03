@@ -1,13 +1,10 @@
-const Categoria = require('../models/categoria.model');
+const Restaurante = require('../models/restaurante.model');
+const passwordHash = require('password-hash');
 
 module.exports = {
     index: async (req, res) => {
-        const { id: restauranteId } = req.headers;
-
-        Categoria.find(
-            {
-                restauranteId,
-            }, 
+        Restaurante.find(
+            {},
             (err, doc) => {
                 if (err) {
                     return res.status(400).json({
@@ -18,40 +15,26 @@ module.exports = {
 
                 res.status(200).json({
                     error: false,
-                    categorias: doc,
+                    restaurantes: doc,
                 });
             },
         );
     },
 
-    store: async (req, res) => {
-        const { id: restauranteId } = req.headers;
-        const doc = { ...req.body, restauranteId };
-
-        Categoria.create(doc, err => {
-            if (err) {
-                return res.status(400).json({
-                    error: true,
-                    message: err,
-                });
-            }
-
-            res.status(200).json({
-                error: false,
-                message: 'Categoria cadastrada com sucesso!',
-            });
-        });
-    },
-
     update: async (req, res) => {
-        const { id: restauranteId } = req.headers;
-        const { id: categoriaId } = req.params;
+        const { senha } = req.body;
+        const { id: restauranteId } = req.params;
+
+        if (req.body.senha) {
+            const hashePassword = await passwordHash.generate(senha);
+            req.body.senha = hashePassword;
+        }
+
         const doc = { ...req.body };
 
-        Categoria.findOneAndUpdate(
+        Restaurante.findOneAndUpdate(
             {
-                _id: categoriaId,
-                restauranteId,
+                _id: restauranteId,
             },
             doc,
             {
@@ -68,20 +51,18 @@ module.exports = {
 
                 res.status(200).json({
                     error: false,
-                    categoria: doc,
+                    restaurante: doc,
                 });
             },
         );
     },
 
     delete: async (req, res) => {
-        const { id: restauranteId } = req.headers;
-        const { id: categoriaId } = req.params;
+        const { id: restauranteId } = req.params;
 
-        Categoria.findOneAndDelete(
+        Restaurante.findOneAndDelete(
             {
-                _id: categoriaId,
-                restauranteId,
+                _id: restauranteId,
             },
             (err, doc) => {
                 if (err) {
@@ -93,7 +74,7 @@ module.exports = {
 
                 res.status(200).json({
                     error: false,
-                    message: 'Categoria deletada com sucesso!',
+                    message: 'Restaurante deletado com sucesso!',
                 });
             },
         );

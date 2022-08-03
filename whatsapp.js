@@ -6,12 +6,12 @@ const Cliente = require('./src/models/cliente.model');
 const Contexto = require('./src/models/contexto.model');
 
 // Path where the session data will be stored
-const SESSION_PATH = process.env.SESSION_PATH;
+const SESSION_FILE_PATH = process.env.SESSION_FILE_PATH;
 
 // Load the session data if it has been previously saved
 let sessionConfig;
-if (fs.existsSync(SESSION_PATH)) {
-    sessionConfig = require(SESSION_PATH);
+if (fs.existsSync(SESSION_FILE_PATH)) {
+    sessionConfig = require(SESSION_FILE_PATH);
 }
 
 // Use the saved values
@@ -28,7 +28,7 @@ const client = new Client({
 
 client.on('authenticated', session => {
     sessionConfig = session;
-	fs.writeFile(SESSION_PATH, JSON.stringify(session), err => {
+	fs.writeFile(SESSION_FILE_PATH, JSON.stringify(session), err => {
 		if (err) {
 			console.error('Falha ao gravar token');
 		}
@@ -46,7 +46,7 @@ client.on('ready', () => {
 
 client.on('auth_failure', session => {
 	sessionConfig = '';
-	fs.writeFile(SESSION_PATH, JSON.stringify(session), err => {
+	fs.writeFile(SESSION_FILE_PATH, JSON.stringify(session), err => {
 		if (err) {
 			console.error('Falha ao gravar token');
 		}
@@ -64,16 +64,97 @@ client.on('message', msg => {
 
 client.initialize();
 
+
+// Método que envia a mensagem
 const sendMessage = async (phone, message) => {
 	phone = `55${phone}@c.us`;
 	message = message || 'Algo deu errado com a mensagem';
 
 	try {
-		// await client.sendMessage(phone, message);
+		await client.sendMessage(phone, message);
 	} catch(err) {
 		console.log(err);
 	}
 };
+
+// Método de boas vindas
+const welcomeMessage = async cliente => {
+	const restaurante = await Restaurante.findById(cliente.restauranteId);
+
+	const mensagem = `Olá, eu sou o bot de atendimento od ${restaurante.nome} e estou aui para lhe ajudar!
+		\nDigite a opção desejada:\n
+		- *Cardápio;
+		- *Instruções;
+		- *Pedido;
+		- *Cancelar;
+		- *Finalizar;
+		\nPara cadastrar seu endereço basta mandar a localização.`;
+
+	sendMessage(cliente.telefone, mensagem);
+};
+
+// Método para lidar com finalização ou cancelamento de pedido
+
+// Método para quando o bot não entende
+const notUnderstandMessage = cliente => {
+	sendMessage(cliente.telefone, 'Desculpe, não consegui entender o que você disse. Digite *instruções para ver comoe me usar!');
+};
+
+// Método para pegar os produtos de um restaurante e mandar o cardápio
+
+// Método para finalizar o pedido
+
+// Método para ver o pedido com os itens adicionados
+
+// Método que vai iniciar o cancelamento do pedido
+
+// Método para lidar com as mensagens não reservadas do bot que são baseadas no contexto
+const defaultMessage = async (cliente, contexto, text) => {
+	switch (contexto.tipo) {
+		case 'welcome':
+			// Mudar o contexto para inical
+			await Contexto.findByIdAndUpdate(contexto._id, {
+				tipo: 'initial',
+			});
+
+			// Mandar mensagem de boas vindas
+			welcomeMessage(cliente);
+			break;
+		case 'initial':
+			
+			break;
+		case 'finish':
+			
+			break;
+		case 'address':
+			// Mudar o contexto para inical
+			await Contexto.findByIdAndUpdate(contexto._id, {
+				tipo: 'initial',
+			});
+
+			// Atualizar número da residência
+			await Cliente.findByIdAndUpdate(
+				cliente._id,
+				{
+					$set: {
+						endereco: {
+							numero: text,
+						},
+					},
+				},
+			);
+
+			sendMessage(cliente.telefone, 'Número do endereço atualizado com sucesso!');
+			break;
+		case 'cancel':
+			
+			break;
+		default:
+			notUnderstandMessage(cliente);
+			break;
+	}
+};
+
 
 // Todas as mensagens passam por esta função
 const clientMessage = async (phone, msg) => {
@@ -179,10 +260,13 @@ const clientMessage = async (phone, msg) => {
 				sendMessage(clienteTel, text);
 				break;
 			case 'instrucoes':
+				welcomeMessage(cliente);
+				break;
+			case 'finalizar':
 				sendMessage(clienteTel, text);
 				break;
 			default:
-				console.log('default');
+				defaultMessage(cliente, contexto, text);
 		}
 	}
 };

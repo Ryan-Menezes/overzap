@@ -1,13 +1,14 @@
-const Categoria = require('../models/categoria.model');
+const Produto = require('../models/produto.model');
 
 module.exports = {
     index: async (req, res) => {
         const { id: restauranteId } = req.headers;
 
-        Categoria.find(
-            {
-                restauranteId,
-            }, 
+        Produto.find({
+            restauranteId,
+        })
+        .populate('categoriaId', '_id nome')
+        .exec(
             (err, doc) => {
                 if (err) {
                     return res.status(400).json({
@@ -18,7 +19,7 @@ module.exports = {
 
                 res.status(200).json({
                     error: false,
-                    categorias: doc,
+                    produtos: doc,
                 });
             },
         );
@@ -28,7 +29,7 @@ module.exports = {
         const { id: restauranteId } = req.headers;
         const doc = { ...req.body, restauranteId };
 
-        Categoria.create(doc, err => {
+        Produto.create(doc, err => {
             if (err) {
                 return res.status(400).json({
                     error: true,
@@ -38,19 +39,19 @@ module.exports = {
 
             res.status(200).json({
                 error: false,
-                message: 'Categoria cadastrada com sucesso!',
+                message: 'Produto cadastrado com sucesso!',
             });
         });
     },
 
     update: async (req, res) => {
         const { id: restauranteId } = req.headers;
-        const { id: categoriaId } = req.params;
+        const { id: produtoId } = req.params;
         const doc = { ...req.body };
 
-        Categoria.findOneAndUpdate(
+        Produto.findOneAndUpdate(
             {
-                _id: categoriaId,
+                _id: produtoId,
                 restauranteId,
             },
             doc,
@@ -68,7 +69,7 @@ module.exports = {
 
                 res.status(200).json({
                     error: false,
-                    categoria: doc,
+                    produto: doc,
                 });
             },
         );
@@ -76,11 +77,11 @@ module.exports = {
 
     delete: async (req, res) => {
         const { id: restauranteId } = req.headers;
-        const { id: categoriaId } = req.params;
+        const { id: produtoId } = req.params;
 
-        Categoria.findOneAndDelete(
+        Produto.findOneAndDelete(
             {
-                _id: categoriaId,
+                _id: produtoId,
                 restauranteId,
             },
             (err, doc) => {
@@ -93,7 +94,7 @@ module.exports = {
 
                 res.status(200).json({
                     error: false,
-                    message: 'Categoria deletada com sucesso!',
+                    message: 'Produto deletado com sucesso!',
                 });
             },
         );

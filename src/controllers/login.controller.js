@@ -3,22 +3,6 @@ const passwordHash = require('password-hash');
 const jwt = require('jsonwebtoken');
 
 module.exports = {
-    index: async (req, res) => {
-        Restaurante.find({}, (err, doc) => {
-            if (err) {
-                return res.status(400).json({
-                    error: true,
-                    message: err,
-                });
-            }
-            
-            res.status(200).json({
-                error: false,
-                restaurantes: doc,
-            });
-        });
-    },
-
     signup: async (req, res) => {
         const { senha } = req.body;
 

@@ -29,7 +29,7 @@ const PedidoProdutoSchema = new Schema({
 });
 
 // Validação para restaurante
-PedidoProdutoSchema.post('validate', (doc, next) => {
+PedidoProdutoSchema.post('validate', async (doc, next) => {
     const pedido = await Pedido.findById(doc.pedidoId);
     const produto = await Produto.findById(doc.produtoId);
 

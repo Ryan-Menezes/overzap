@@ -1,8 +1,8 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
-const Categoria = require('./pedido.model');
-const Restaurante = require('./produto.model');
+const Categoria = require('./categoria.model');
+const Restaurante = require('./restaurante.model');
 
 const ProdutoSchema = new Schema({
     nome: {
@@ -54,4 +54,4 @@ ProdutoSchema.post('validate', (doc, next) => {
     });
 });
 
-module.exports = mongoose.model('pedido_produto', PedidoProdutoSchema);
+module.exports = mongoose.model('produto', ProdutoSchema);

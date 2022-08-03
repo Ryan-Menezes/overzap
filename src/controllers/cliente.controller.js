@@ -1,10 +1,10 @@
-const Categoria = require('../models/categoria.model');
+const Cliente = require('../models/cliente.model');
 
 module.exports = {
     index: async (req, res) => {
         const { id: restauranteId } = req.headers;
 
-        Categoria.find(
+        Cliente.find(
             {
                 restauranteId,
             }, 
@@ -18,7 +18,7 @@ module.exports = {
 
                 res.status(200).json({
                     error: false,
-                    categorias: doc,
+                    clientes: doc,
                 });
             },
         );
@@ -28,7 +28,7 @@ module.exports = {
         const { id: restauranteId } = req.headers;
         const doc = { ...req.body, restauranteId };
 
-        Categoria.create(doc, err => {
+        Cliente.create(doc, err => {
             if (err) {
                 return res.status(400).json({
                     error: true,
@@ -38,19 +38,19 @@ module.exports = {
 
             res.status(200).json({
                 error: false,
-                message: 'Categoria cadastrada com sucesso!',
+                message: 'Cliente cadastrado com sucesso!',
             });
         });
     },
 
     update: async (req, res) => {
         const { id: restauranteId } = req.headers;
-        const { id: categoriaId } = req.params;
+        const { id: clienteId } = req.params;
         const doc = { ...req.body };
 
-        Categoria.findOneAndUpdate(
+        Cliente.findOneAndUpdate(
             {
-                _id: categoriaId,
+                _id: clienteId,
                 restauranteId,
             },
             doc,
@@ -68,7 +68,7 @@ module.exports = {
 
                 res.status(200).json({
                     error: false,
-                    categoria: doc,
+                    cliente: doc,
                 });
             },
         );
@@ -76,11 +76,11 @@ module.exports = {
 
     delete: async (req, res) => {
         const { id: restauranteId } = req.headers;
-        const { id: categoriaId } = req.params;
+        const { id: clienteId } = req.params;
 
-        Categoria.findOneAndDelete(
+        Cliente.findOneAndDelete(
             {
-                _id: categoriaId,
+                _id: clienteId,
                 restauranteId,
             },
             (err, doc) => {
@@ -93,7 +93,7 @@ module.exports = {
 
                 res.status(200).json({
                     error: false,
-                    message: 'Categoria deletada com sucesso!',
+                    message: 'Cliente deletado com sucesso!',
                 });
             },
         );

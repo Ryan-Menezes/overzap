@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 const Restaurante = require('./restaurante.model');
-const Cliente = require('./restaurante.model');
+const Cliente = require('./cliente.model');
 
 const PedidoSchema = new Schema({
     restauranteId: {
