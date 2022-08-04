@@ -4,6 +4,9 @@ const { Client, LocalAuth, LegacySessionAuth } = require('whatsapp-web.js');
 const Restaurante = require('./src/models/restaurante.model');
 const Cliente = require('./src/models/cliente.model');
 const Contexto = require('./src/models/contexto.model');
+const Produto = require('./src/models/produto.model');
+const Pedido = require('./src/models/pedido.model');
+const PedidoProduto = require('./src/models/pedidoProduto.model');
 
 // Path where the session data will be stored
 const SESSION_FILE_PATH = process.env.SESSION_FILE_PATH;
@@ -83,11 +86,11 @@ const welcomeMessage = async cliente => {
 
 	const mensagem = `Olá, eu sou o bot de atendimento od ${restaurante.nome} e estou aui para lhe ajudar!
 		\nDigite a opção desejada:\n
-		- *Cardápio;
-		- *Instruções;
-		- *Pedido;
-		- *Cancelar;
-		- *Finalizar;
+		- *Cardápio*;
+		- *Instruções*;
+		- *Pedido*;
+		- *Cancelar*;
+		- *Finalizar*;
 		\nPara cadastrar seu endereço basta mandar a localização.`;
 
 	sendMessage(cliente.telefone, mensagem);
@@ -101,10 +104,70 @@ const notUnderstandMessage = cliente => {
 };
 
 // Método para pegar os produtos de um restaurante e mandar o cardápio
+const menuMessage = async (cliente, contexto) => {
+	// Mudar o contexto para inical
+	await Contexto.findByIdAndUpdate(contexto._id, {
+		tipo: 'initial',
+	});
+
+	const menu = await Produto.find({
+		restauranteId: cliente.restauranteId,
+		situacao: 'A',
+	})
+	.sort('categoriaId');
+
+	let message = '';
+	menu.forEach((item, index) => {
+		message += `${index + 1}. ${item.nome} - R$${item.valor}\n`
+		message += item.descricao ? `_${item.descricao}\n` : '\n';
+	});
+	message += `\n Para adicionar um item ao carrinho basta informar o número dele!
+	\nSe você quiser adicionar mais de um item do mesmo produto basta informar o produto x quantidade
+	\nEx: 1x3 - 3 itens do produto número 1
+	`;
+
+	sendMessage(cliente.telefone, message);
+};
 
 // Método para finalizar o pedido
 
 // Método para ver o pedido com os itens adicionados
+const orderMessage = async (cliente, contexto) => {
+	// Mudar o contexto para inical
+	await Contexto.findByIdAndUpdate(contexto._id, {
+		tipo: 'initial',
+	});
+
+	const pedido = await Pedido.findOne({
+		clienteId: cliente._id,
+		situacao: 'A',
+	});
+
+	if (!pedido) {
+		return sendMessage(cliente.telefone, `Não há pedidos em aberto em nome de ${cliente.nome}`);
+	}
+
+	const pedidoItens = await PedidoProduto.find({
+		pedidoId: pedido._id,
+	}).populate('produtoId');
+
+	if (!pedidoItens.length) {
+		return sendMessage(cliente.telefone, `Não há produtos no pedido em nome de ${cliente.nome}`);
+	}
+
+	let message = '';
+	let total = 0;
+
+	pedidoItens.forEach(item => {
+		const subtotal = item.valorUnitario * item.quantidade;
+		total += subtotal;
+		message += `${item.quantidade} x ${item.productId.nome} = R$${parseFloat(subtotal.fixed(2))}\n`;
+	});
+
+	message += `*Total:* _R$${parseFloat(total.fixed(2))}_`;
+
+	sendMessage(cliente.telefone, message);
+};
 
 // Método que vai iniciar o cancelamento do pedido
 
@@ -121,7 +184,47 @@ const defaultMessage = async (cliente, contexto, text) => {
 			welcomeMessage(cliente);
 			break;
 		case 'initial':
-			
+			let produto, quantidade = 1;
+
+			try {
+				if (text.indexOf('x') > -1) {
+					[produto, quantidade] = text.split('x');
+				} else {
+					produto = text;
+				}
+
+				const menu = await Produto.find({
+					restauranteId: cliente.restauranteId,
+					situacao: 'A',
+				})
+				.sort('categoriaId');
+
+				produto = menu[parseInt(produto) - 1];
+
+				let pedido = await Pedido.findOne({
+					clienteId: cliente._id,
+					situacao: 'A',
+				});
+
+				if (!pedido) {
+					pedido = await Pedido.create({
+						restauranteId: cliente.restauranteId,
+						clienteId: cliente._id,
+					});
+				}
+
+				await PedidoProduto.create({
+					pedidoId: pedido._id,
+					produtoId: produto._id,
+					valorUnitario: produto.valor,
+					quantidade: parseInt(quantidade),
+				});
+
+				sendMessage(cliente.telefone, `${quantidade} *${product.nome}* adicionado ao carrinho`);
+			} catch {
+				sendMessage(cliente.telefone, 'Este produto não existe, digite uma das opções no cardápio, caso queira, digite instrucões para ver o cardápio');
+			}
+
 			break;
 		case 'finish':
 			
@@ -154,7 +257,6 @@ const defaultMessage = async (cliente, contexto, text) => {
 			break;
 	}
 };
-
 
 // Todas as mensagens passam por esta função
 const clientMessage = async (phone, msg) => {
@@ -247,6 +349,9 @@ const clientMessage = async (phone, msg) => {
 		const text = msg.body.normalize('NFD').replace('/[\u0300-\u036f]/g', '').toLowerCase();
 	
 		switch (text) {
+			case 'cardapio':
+				menuMessage(cliente, contexto);
+				break;
 			case 'sim':
 				sendMessage(clienteTel, text);
 				break;
@@ -254,7 +359,7 @@ const clientMessage = async (phone, msg) => {
 				sendMessage(clienteTel, text);
 				break;
 			case 'pedido':
-				sendMessage(clienteTel, text);
+				orderMessage(cliente, contexto);
 				break;
 			case 'cancelar':
 				sendMessage(clienteTel, text);
