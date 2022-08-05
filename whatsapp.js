@@ -74,7 +74,8 @@ const sendMessage = async (phone, message) => {
 	message = message || 'Algo deu errado com a mensagem';
 
 	try {
-		await client.sendMessage(phone, message);
+		//await client.sendMessage(phone, message);
+		console.log(phone, message);
 	} catch(err) {
 		console.log(err);
 	}
@@ -84,7 +85,7 @@ const sendMessage = async (phone, message) => {
 const welcomeMessage = async cliente => {
 	const restaurante = await Restaurante.findById(cliente.restauranteId);
 
-	const mensagem = `Olá, eu sou o bot de atendimento od ${restaurante.nome} e estou aui para lhe ajudar!
+	const mensagem = `Olá, eu sou o bot de atendimento do ${restaurante.nome} e estou aui para lhe ajudar!
 		\nDigite a opção desejada:\n
 		- *Cardápio*;
 		- *Instruções*;
@@ -119,7 +120,7 @@ const menuMessage = async (cliente, contexto) => {
 	let message = '';
 	menu.forEach((item, index) => {
 		message += `${index + 1}. ${item.nome} - R$${item.valor}\n`
-		message += item.descricao ? `_${item.descricao}\n` : '\n';
+		message += item.descricao ? `_${item.descricao}_\n\n` : '\n';
 	});
 	message += `\n Para adicionar um item ao carrinho basta informar o número dele!
 	\nSe você quiser adicionar mais de um item do mesmo produto basta informar o produto x quantidade
@@ -129,7 +130,80 @@ const menuMessage = async (cliente, contexto) => {
 	sendMessage(cliente.telefone, message);
 };
 
-// Método para finalizar o pedido
+// Método para confirmar a ação
+const confirmMessage = async (cliente, contexto) => {
+	let pedido;
+
+	// Mudar o contexto para cancel
+	await Contexto.findByIdAndUpdate(contexto._id, {
+		tipo: 'initial',
+	});
+
+	switch (contexto.tipo) {
+		case 'cancel':
+			pedido = await Pedido.findOneAndUpdate(
+				{
+					clienteId: cliente._id,
+					situacao: 'A',
+				},
+				{
+					$set: {
+						situacao: 'C',
+					},
+				},
+			);
+
+			if (pedido) {
+				sendMessage(cliente.telefone, 'Seu pedido foi cancelado com sucesso!');
+			} else {
+				sendMessage(cliente.telefone, 'Desculpe, não encontramos seu pedido!');
+			}
+
+			break;
+		case 'finish':
+			pedido = await Pedido.findOneAndUpdate(
+				{
+					clienteId: cliente._id,
+					situacao: 'A',
+				},
+				{
+					$set: {
+						situacao: 'F',
+					},
+				},
+			).populate('restauranteId');
+
+			if (pedido) {
+				sendMessage(cliente.telefone, 'Seu pedido foi finalizado com sucesso!');
+				sendMessage(cliente.telefone, `Nós da ${pedido.restauranteId.nome} agradecemos a preferência!`);
+			} else {
+				sendMessage(cliente.telefone, 'Desculpe, não encontramos seu pedido!');
+			}
+			
+			break;
+		default:
+			notUnderstandMessage(cliente);
+	}
+};
+
+// Método para negar a ação
+const denyMessage = async (cliente, contexto) => {
+	// Mudar o contexto para cancel
+	await Contexto.findByIdAndUpdate(contexto._id, {
+		tipo: 'initial',
+	});
+
+	switch (contexto.tipo) {
+		case 'cancel':
+			sendMessage(cliente.telefone, 'Ok, continue seu pedido e digite *finalizar* para finalizar o pedido');
+			break;
+		case 'finish':
+			sendMessage(cliente.telefone, 'Ok, continue seu pedido e digite *finalizar* para finalizar o pedido');
+			break;
+		default:
+			notUnderstandMessage(cliente);
+	}
+};
 
 // Método para ver o pedido com os itens adicionados
 const orderMessage = async (cliente, contexto) => {
@@ -170,6 +244,23 @@ const orderMessage = async (cliente, contexto) => {
 };
 
 // Método que vai iniciar o cancelamento do pedido
+const cancelMessage = async (cliente, contexto) => {
+	const pedido = await Pedido.findOne({
+		clienteId: cliente._id,
+		situacao: 'A',
+	});
+
+	if (!pedido) {
+		return sendMessage(cliente.telefone, `Não há pedidos em aberto em nome de ${cliente.nome}`);
+	}
+
+	// Mudar o contexto para cancel
+	await Contexto.findByIdAndUpdate(contexto._id, {
+		tipo: 'cancel',
+	});
+
+	sendMessage(cliente.telefone, `Tem certeza que deseja cancelar o pedido: (Sim ou Não)`);
+};
 
 // Método para lidar com as mensagens não reservadas do bot que são baseadas no contexto
 const defaultMessage = async (cliente, contexto, text) => {
@@ -256,6 +347,56 @@ const defaultMessage = async (cliente, contexto, text) => {
 			notUnderstandMessage(cliente);
 			break;
 	}
+};
+
+// Esse método vai iniciar a finalização
+const finishMessage = async (cliente, contexto) => {
+	// Mudar o contexto para inical
+	await Contexto.findByIdAndUpdate(contexto._id, {
+		tipo: 'initial',
+	});
+
+	const [latitude = null, longitude = null] = cliente.endereco.coordinates;
+
+	if (!latitude || !longitude || !cliente.endereco.numero) {
+		return sendMessage(cliente.telefone, 'Para finalizar o pedido precisamos do seu endereço, mande a sua localização e em seguida o número');
+	}
+
+	// Mudar o contexto para finish
+	await Contexto.findByIdAndUpdate(contexto._id, {
+		tipo: 'finish',
+	});
+
+	const pedido = await Pedido.findOne({
+		clienteId: cliente._id,
+		situacao: 'A',
+	});
+
+	if (!pedido) {
+		return sendMessage(cliente.telefone, `Não há pedidos em aberto em nome de ${cliente.nome}`);
+	}
+
+	const pedidoItens = await PedidoProduto.find({
+		pedidoId: pedido._id,
+	}).populate('produtoId');
+
+	if (!pedidoItens.length) {
+		return sendMessage(cliente.telefone, `Não há produtos no pedido em nome de ${cliente.nome}`);
+	}
+
+	let message = '';
+	let total = 0;
+
+	pedidoItens.forEach(item => {
+		const subtotal = item.valorUnitario * item.quantidade;
+		total += subtotal;
+		message += `${item.quantidade} x ${item.productId.nome} = R$${parseFloat(subtotal.fixed(2))}\n`;
+	});
+
+	message += `*Total:* _R$${parseFloat(total.fixed(2))}_`;
+
+	sendMessage(cliente.telefone, message);
+	sendMessage(cliente.telefone, 'Deseja confirmar o pedido: (Sim ou Não)');
 };
 
 // Todas as mensagens passam por esta função
@@ -353,25 +494,29 @@ const clientMessage = async (phone, msg) => {
 				menuMessage(cliente, contexto);
 				break;
 			case 'sim':
-				sendMessage(clienteTel, text);
+				confirmMessage(cliente, contexto);
 				break;
 			case 'nao':
-				sendMessage(clienteTel, text);
+				denyMessage(cliente, contexto);
 				break;
 			case 'pedido':
 				orderMessage(cliente, contexto);
 				break;
 			case 'cancelar':
-				sendMessage(clienteTel, text);
+				cancelMessage(cliente, contexto);
 				break;
 			case 'instrucoes':
 				welcomeMessage(cliente);
 				break;
 			case 'finalizar':
-				sendMessage(clienteTel, text);
+				finishMessage(cliente, contexto);
 				break;
 			default:
 				defaultMessage(cliente, contexto, text);
 		}
 	}
+};
+
+module.exports = {
+	sendMessage,
 };

@@ -9,7 +9,7 @@ module.exports = {
             req.headers.id = restauranteId;
             next();
         } catch (err){
-            res.status(103).json({
+            res.status(401).json({
                 error: true,
                 message: "Token inválido",
             });
