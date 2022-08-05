@@ -74,8 +74,7 @@ const sendMessage = async (phone, message) => {
 	message = message || 'Algo deu errado com a mensagem';
 
 	try {
-		//await client.sendMessage(phone, message);
-		console.log(phone, message);
+		await client.sendMessage(phone, message);
 	} catch(err) {
 		console.log(err);
 	}
