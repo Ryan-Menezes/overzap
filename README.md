@@ -16,3 +16,4 @@ Finally, start the node.js server with the command "npm start" in a separate ter
 cd "project directory"
 npm start
 ```
+This project was developed through an online course: [Overstack](https://www.youtube.com/watch?v=5g9_yCjE2ek&list=PLZO_SqCI6cXZJaMCbjdlNKh8mFeh_AVRc)
