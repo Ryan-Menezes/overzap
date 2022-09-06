@@ -1,10 +1,10 @@
 # overzap
 Api for ordering via whatsapp
 ## Settings
-Have [Node.js](https://nodejs.org/pt-br/) installed on your machine and through your terminal enter the project directory and run the command "npm update":
+Have [Node.js](https://nodejs.org/pt-br/) installed on your machine and through your terminal enter the project directory and run the command "npm install":
 ```sh
 cd "project directory"
-npm update
+npm install
 ```
 After that make sure that [MongoDB](https://www.mongodb.com/) is installed on your machine and run the command "mongod" in a separate terminal to start the mongo server:
 ```sh
